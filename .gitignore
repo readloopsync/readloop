@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+out/
+target/
+*.tsbuildinfo
+
+# Rust / Tauri
+**/target/
+*.rs.bk
+
+# Secrets & local config — NEVER commit a Readwise token
+.env
+.env.*
+!.env.example
+*.local
+
+# Caches
+.cache/
+epub-cache/
+*.epub
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
