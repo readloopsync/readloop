@@ -40,8 +40,8 @@ Readloop is delivered in layers over one server, so it fits homelab, NAS, and no
 | Component | What | Where |
 |-----------|------|-------|
 | **Readwise OPDS source** | The delivery half — contributed upstream as a new source in [`news2reader`](https://github.com/BHSPitMonkey/news2reader) (MIT), which already does OPDS + on‑the‑fly EPUB. | fork → upstream PR |
-| **`readloop-sync`** | The read-state half — a Readwise connector for [`crosspoint-sync`](https://github.com/crosspoint-reader/crosspoint-sync) (a self-hostable KOSync server with pluggable service connectors). | this org |
-| **`readloop-desktop`** | A cross-platform menu‑bar/tray app (Tauri) that runs the server for people who don't want Docker — paste your token, get an OPDS URL + QR to point the reader at. | this org |
+| **`readloopsync-kosync`** | The read-state half — a Readwise connector for [`crosspoint-sync`](https://github.com/crosspoint-reader/crosspoint-sync) (a self-hostable KOSync server with pluggable service connectors). | this org |
+| **`readloopsync-desktop`** | A cross-platform menu‑bar/tray app (Tauri) that runs the server for people who don't want Docker — paste your token, get an OPDS URL + QR to point the reader at. | this org |
 
 **Distribution:** multi-arch Docker image (primary, for self-hosters) · single binary / `npx` (no‑Docker) · desktop app via Homebrew Cask / winget. Bring your own Readwise token; Readloop stores nothing and phones home to no one.
 
