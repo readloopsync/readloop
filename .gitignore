@@ -39,3 +39,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Sibling repos cloned inside the umbrella directory (tracked as their own repos)
+/news2reader/
+/rls-desktop/
+/rls-kosync/
