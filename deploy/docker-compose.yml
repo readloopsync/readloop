@@ -1,0 +1,22 @@
+# Readloop — delivery half (Readwise -> OPDS/EPUB)
+#
+# Runs the Readwise-enabled news2reader (our fork branch) until the Readwise
+# source is merged upstream and published as an image. Docker builds straight
+# from the git branch, so no local checkout or Node toolchain is needed.
+#
+#   1. cp .env.example .env  &&  put your token in it (https://readwise.io/access_token)
+#   2. docker compose up --build
+#   3. On the e-reader, add an OPDS catalog pointing at:  http://<this-host>:8080/opds
+#
+services:
+  readloop:
+    build:
+      context: "https://github.com/readloopsync/news2reader.git#readwise-source"
+    environment:
+      READWISE_TOKEN: ${READWISE_TOKEN:?set READWISE_TOKEN in .env}
+      # Optional tuning (see the fork's README):
+      # READWISE_MAX_PAGES: "3"
+      # READWISE_LIST_TTL_MS: "60000"
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    restart: unless-stopped

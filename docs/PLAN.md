@@ -1,5 +1,18 @@
 # Readloop — Plan
 
+## Progress log
+- **2026-09-17** — Org `readloopsync` created; hub repo `readloopsync/readloop` live (MIT).
+  `news2reader` forked to `readloopsync/news2reader`.
+  **Phase 1 (delivery) first cut done** on branch `readwise-source`:
+  a Readwise Reader provider (`src/provider/readwise.ts`) exposing feeds by
+  location and building EPUBs from `html_content`; `htmlToEpub()` and a generic
+  OPDS acquisition entry added. Builds on Node 22; smoke-tested without/with a
+  (dummy) token — catalog gating, OPDS XML, auth header, and error handling all
+  verified. **Still needed:** validate real data + EPUB rendering with a live
+  `READWISE_TOKEN`, then on an actual X3. See `deploy/docker-compose.yml` for the
+  drop-in-token run path, and `docs/DEV-NOTES.md` for the Node 22 toolchain gotcha.
+  Not yet opened as an upstream PR (pending live validation + maintainer coordination).
+
 ## Goal
 Deliver a Readwise (Reader) library to Crosspoint e-readers (and any OPDS/KOSync device) as EPUBs, and reflect real reading progress back to Readwise as read-state — packaged so homelab, NAS, and non-technical desktop users can all run it.
 

@@ -47,6 +47,22 @@ Readloop is delivered in layers over one server, so it fits homelab, NAS, and no
 
 **Distribution:** multi-arch Docker image (primary, for self-hosters) · single binary / `npx` (no‑Docker) · desktop app via Homebrew Cask / winget. Bring your own Readwise token; Readloop stores nothing and phones home to no one.
 
+## Try it (early)
+
+The delivery half works today from the fork branch. With Docker (no Node setup needed):
+
+```sh
+cd deploy
+cp .env.example .env          # then put your token in .env
+docker compose up --build     # builds readloopsync/news2reader@readwise-source
+```
+
+Then on the e-reader, add an OPDS catalog pointing at `http://<this-host>:8080/opds`
+and open **Readwise Reader**. Get a token at [readwise.io/access_token](https://readwise.io/access_token).
+
+> Status: the Readwise source builds and is smoke-tested; real-data + on-device
+> validation is the current step. See [`docs/PLAN.md`](docs/PLAN.md) for progress.
+
 ## Roadmap
 
 - **v1 — Delivery:** Readwise source upstreamed to `news2reader`; Docker + binary; desktop app; docs.
