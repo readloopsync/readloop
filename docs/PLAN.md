@@ -1,6 +1,7 @@
 # Readloop — Plan
 
 ## Progress log
+- **2026-09-18 (v2 connector drafted)** — Read `crosspoint-sync` in depth: it treats the KOSync `document` as an opaque hash and matches by **title/author metadata** the firmware sends (not a file hash). Wrote the **`readwise-reader` connector** (carries `finished` → Reader `bulk_update` archive; matches via `decideMatch` on the non-archived Reader pool) — it **typechecks** against crosspoint-sync's types. Saved to [`proposals/crosspoint-sync/`](../proposals/crosspoint-sync/). Also confirmed on-device that Crosspoint ignores `Content-Disposition` (filename-id dead). **Gating unknown before a PR:** does Crosspoint's KOSync send title metadata in the progress call, and is ≥98% reachable for short articles — both need the X3.
 - **2026-09-18 (later still)** — **Upstream PR opened + v2 scoped.** Opened
   BHSPitMonkey/news2reader **PR #4** ("Add Readwise Reader provider", focused:
   provider + image handling; auth/provider-filter offered as follow-ups). Scoped

@@ -58,27 +58,32 @@ Register it in `src/connectors/registry.ts`. Idempotency: archiving an already-a
 
 ## The id-mapping problem (the crux)
 
-The connector needs the finished book's **Reader document id**. Options, best first:
+The connector needs the finished book's **Reader document id**. After reading `crosspoint-sync`'s code, the mechanism is settled:
 
-1. **KOReader document-hash map (recommended).** KOSync identifies each book by a **document hash** — KOReader's *partial-MD5* (MD5 of a few byte ranges of the file). Since *we* generate the EPUB, we compute that same hash at generation time and persist `{hash → readwise_id}` in a small shared store; the connector resolves the KOSync `document` field (the hash) → id. Exact, and independent of filename/title.
-   - **To confirm:** that `crosspoint-sync`'s `document` field is KOReader's partial-MD5 (verify against its `kosync.ts`/`matching.ts`), and replicate that exact algorithm server-side.
-   - **Shared store:** the OPDS server and `crosspoint-sync` are separate processes, so either a shared SQLite/JSON file or a tiny `GET /map?hash=` lookup the connector calls.
-2. **Title match (fallback).** Crosspoint names downloads `<author/site> - <title>.epub` from the OPDS entry, and sends title/filename in KOSync `DocumentMeta`, so the connector can match by title against the Reader library. Fuzzy — titles can collide/differ — so gate on high confidence and prefer *not* archiving over archiving the wrong doc.
+**Title/author metadata match (this is how the framework actually works).** `crosspoint-sync` treats the KOSync `document` value as an **opaque hash** — it does *not* recompute it from the file — and matches books by **title/author the firmware sends** in the progress `metadata` (see its `connectors/matching.ts`: "the EPUB's own title/author … is the real signal"). So the connector builds a candidate pool from the non-archived Reader locations and runs the framework's `decideMatch()` against the finished doc's title/author.
+
+**Why this is near-exact for us (not fuzzy):** Readloop authors each EPUB's `dc:title` to equal the Readwise article title verbatim, so the title the firmware extracts equals the Reader document's title. We still gate at a high confidence threshold (0.85) so a collision never archives the wrong doc.
+
+✅ **The connector is written and typechecks** against crosspoint-sync's real types — see [`proposals/crosspoint-sync/`](../proposals/crosspoint-sync/) (`readwise-reader.ts` + notes).
+
+*(The earlier "compute a KOReader partial-MD5 hash map" idea is dropped: the server never sees the file and treats the hash as opaque, so it isn't the framework's path. A hash map would only be a fallback if Crosspoint turns out not to send title metadata over KOSync — see open questions.)*
 
 ### ❌ Ruled out: filename-stamped id
 Setting `Content-Disposition: filename="<title> [rw-<id>].epub"` does **not** work on Crosspoint: **confirmed on-device 2026-09-18**, Crosspoint ignores the header and names the file from the OPDS entry (`aresluna.org - One hundred and thirty-seven seconds – Aresluna.epub`), so the `[rw-<id>]` never reaches `DocumentMeta.filename`. (Matches upstream PR #2415 "keep server filename" — not default yet.) The `Content-Disposition` header is kept anyway: harmless on Crosspoint, and readers that honor it (Kobo/KOReader) get nicer filenames.
 
 ## Open questions — need on-device / crosspoint-sync validation (Jay + X3)
-- ✅ Does Crosspoint save under the server-provided filename? **No** (confirmed 2026-09-18) — names by OPDS `<author> - <title>`. Filename-id ruled out; use the hash map.
-- Is `crosspoint-sync`'s `document` field KOReader's partial-MD5, and can we replicate it exactly on the produced EPUB? (Gates the hash-map approach.)
-- What `DocumentMeta` fields does Crosspoint's KOSync actually populate at the server (title? filename?) — for the fallback title match.
-- Is **98%** reachable for short articles on the X3 (does finishing the last page cross the threshold)? If not, may need a per-connector threshold.
-- Where will `crosspoint-sync` run — self-hosted alongside Readloop on the mini, or the hosted `sync.crosspointreader.com`? (Connector must be in the build that runs.)
+- ✅ Does Crosspoint save under the server filename? **No** (2026-09-18) — names by OPDS `<author> - <title>`; filename-id ruled out.
+- ✅ How does the connector map finished→Reader doc? **Title/author metadata match** — connector written and typechecks (`proposals/crosspoint-sync/`).
+- **THE gating unknown:** does Crosspoint's KOSync actually **send title/author metadata** in the progress call? crosspoint-sync's matching assumes the firmware does; confirm on-device. If it doesn't, we'd need a document-hash map (needs Crosspoint's exact hash algorithm) instead.
+- Is **98%** reachable for short articles on the X3 (does finishing the last page cross `fanout.ts`'s threshold)? If not, may need a per-connector threshold.
+- Where will `crosspoint-sync` run — self-hosted on the mini, or the hosted `sync.crosspointreader.com`? (The connector must be in the build that runs; self-host is needed to add our connector.)
 
 ## Recommended path
-1. ~~Content-Disposition filename stamp~~ — shipped, but **on-device test (2026-09-18) showed Crosspoint ignores it** (see "Ruled out" above). Header kept for other readers. **Pivot to the KOReader-hash map (option 1 above).**
-2. Confirm `crosspoint-sync`'s `document` = KOReader partial-MD5 (read its `kosync.ts`/`matching.ts`), and replicate that hash in the OPDS provider at EPUB-generation time → persist `{hash → readwise_id}`.
-3. Self-host `crosspoint-sync` on the mini; add the `readwise-reader` connector (resolves hash → id via the shared map, title as fallback); point the X3's KOSync at it.
+1. ✅ Connector written + typechecks (`proposals/crosspoint-sync/readwise-reader.ts`).
+2. Self-host `crosspoint-sync` on the mini; drop in the connector + register it.
+3. Point the X3's KOSync at it (Settings → System → KOReader Sync). **First: verify the progress call carries title metadata** (server logs / DocumentMeta) — that gates the whole approach.
+4. Read an article past 98% → confirm it archives in Readwise and leaves the OPDS feed.
+5. If solid, PR the connector to `crosspoint-sync`.
 3. Validate on-device: read an article past 98% → confirm it archives in Readwise and drops out of the OPDS feed.
 4. If solid, PR the connector to `crosspoint-sync` (they built the framework for exactly this — see their Hardcover/ABS connectors).
 
