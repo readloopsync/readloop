@@ -44,3 +44,6 @@ Thumbs.db
 /news2reader/
 /rls-desktop/
 /rls-kosync/
+
+# Pinned Node runtime for the launchd service
+/.runtime/

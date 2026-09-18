@@ -1,6 +1,15 @@
 # Readloop — Plan
 
 ## Progress log
+- **2026-09-18** — **Validated on-device (X3) and deployed durably.** Image
+  transcode (webp→grayscale JPEG via sharp) + background cache-warming added;
+  images now render on Crosspoint. `OPDS_PROVIDERS=readwise` collapses the
+  catalog root straight to the Readwise locations. Running as a **launchd
+  service** on the mini (`com.readloopsync.readloop`, pinned Node 22 in
+  `.runtime/`, token in gitignored `deploy/.env`) at **:7323**
+  (`http://192.168.1.177:7323/opds`). Docker recipe (`deploy/`) updated to match
+  for other users. Also filed Crosspoint Idea #3606 (open-after-OPDS-download).
+  Next: upstream PR to news2reader; then v2 read-state (`rls-kosync`).
 - **2026-09-17** — Org `readloopsync` created; hub repo `readloopsync/readloop` live (MIT).
   `news2reader` forked to `readloopsync/news2reader`.
   **Phase 1 (delivery) first cut done** on branch `readwise-source`:

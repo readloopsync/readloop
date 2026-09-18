@@ -14,9 +14,16 @@ services:
       context: "https://github.com/readloopsync/news2reader.git#readwise-source"
     environment:
       READWISE_TOKEN: ${READWISE_TOKEN:?set READWISE_TOKEN in .env}
+      # Re-encode images to grayscale JPEG so e-ink readers (Crosspoint/Xteink)
+      # render them (they can't decode webp).
+      READWISE_IMAGES: transcode
+      # Readwise-only instance: the catalog root goes straight to the Readwise
+      # locations, so the reader lands there with no extra taps.
+      OPDS_PROVIDERS: readwise
       # Optional tuning (see the fork's README):
+      # READWISE_IMG_MAX_WIDTH: "1000"
+      # READWISE_IMG_GRAYSCALE: "1"
       # READWISE_MAX_PAGES: "3"
-      # READWISE_LIST_TTL_MS: "60000"
     ports:
-      - "${HOST_PORT:-8080}:8080"
+      - "${HOST_PORT:-7323}:8080"
     restart: unless-stopped
