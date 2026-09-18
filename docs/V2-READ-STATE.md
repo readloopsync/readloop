@@ -89,3 +89,25 @@ Setting `Content-Disposition: filename="<title> [rw-<id>].epub"` does **not** wo
 
 ## Note
 Supersedes the earlier plan's standalone `rls-kosync` repo: the connector belongs **inside `crosspoint-sync`**, so v2 is (a) a small Readwise-provider tweak here + (b) a connector PR to `crosspoint-sync`, not a new repo.
+
+---
+
+## Future (v3): progress fan-in — Readwise → device
+
+Mirror image of v2 (which pushes *finished* → archive). Idea: when you've read part
+of an article in Readwise, a freshly downloaded EPUB should open at that spot.
+
+- **Feasible — the plumbing exists.** `crosspoint-sync` already does progress
+  *fan-in* for Audiobookshelf (`refreshProgress`/`fanin.ts`): pull a percentage
+  from an external service into the canonical store; the device picks it up on its
+  next sync (which PULLs via `GET /syncs/progress/:document`).
+- **Work:** make `readwise-reader` **read-capable** (currently write-only) and add
+  a fan-in pull that reads each matched doc's `reading_progress` (0–1, from the
+  Reader API) → returns an `InboundChange {percentage, finished}`.
+- **Caveat — position precision:** KOSync resumes to a *real xpath position* in the
+  specific EPUB, but Readwise only exposes a **percentage**. crosspoint-sync
+  translates percentage→position from **samples harvested during prior device
+  reads**, which don't exist for a never-opened download. So on first open you'd
+  get the right *status/percentage*, but not necessarily an exact-line seek until
+  the device has read it once.
+- **Scope:** v3, after v2 (fan-out/archive) is validated on-device.
