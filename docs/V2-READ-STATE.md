@@ -60,22 +60,25 @@ Register it in `src/connectors/registry.ts`. Idempotency: archiving an already-a
 
 The connector needs the finished book's **Reader document id**. Options, best first:
 
-1. **Filename-stamped id (recommended, self-contained).** Our OPDS provider sets `Content-Disposition: attachment; filename="<title> [rw-<id>].epub"` on `content.epub`. If Crosspoint saves with the server filename, `DocumentMeta.filename` carries the id and `match()` parses it out — exact, no firmware sidecar needed.
-   - **Companion change (our side):** add that header in `src/provider/readwise.ts`'s content route.
-   - **Dependency:** Crosspoint must preserve the server-provided filename. There's upstream movement here (PR #2415 "OPDS - keep server filename"); needs confirming on-device.
-2. **Sidecar exact id.** `crosspoint-sync` types already have `Match.fromSidecar` ("exact provider id supplied by the downloaded book's sidecar"). Cleaner but needs firmware to write/send a sidecar — more moving parts.
-3. **Title match (fallback).** Unreliable for articles (titles collide/differ); use only to *not* archive (confidence too low), never to archive the wrong doc.
+1. **KOReader document-hash map (recommended).** KOSync identifies each book by a **document hash** — KOReader's *partial-MD5* (MD5 of a few byte ranges of the file). Since *we* generate the EPUB, we compute that same hash at generation time and persist `{hash → readwise_id}` in a small shared store; the connector resolves the KOSync `document` field (the hash) → id. Exact, and independent of filename/title.
+   - **To confirm:** that `crosspoint-sync`'s `document` field is KOReader's partial-MD5 (verify against its `kosync.ts`/`matching.ts`), and replicate that exact algorithm server-side.
+   - **Shared store:** the OPDS server and `crosspoint-sync` are separate processes, so either a shared SQLite/JSON file or a tiny `GET /map?hash=` lookup the connector calls.
+2. **Title match (fallback).** Crosspoint names downloads `<author/site> - <title>.epub` from the OPDS entry, and sends title/filename in KOSync `DocumentMeta`, so the connector can match by title against the Reader library. Fuzzy — titles can collide/differ — so gate on high confidence and prefer *not* archiving over archiving the wrong doc.
+
+### ❌ Ruled out: filename-stamped id
+Setting `Content-Disposition: filename="<title> [rw-<id>].epub"` does **not** work on Crosspoint: **confirmed on-device 2026-09-18**, Crosspoint ignores the header and names the file from the OPDS entry (`aresluna.org - One hundred and thirty-seven seconds – Aresluna.epub`), so the `[rw-<id>]` never reaches `DocumentMeta.filename`. (Matches upstream PR #2415 "keep server filename" — not default yet.) The `Content-Disposition` header is kept anyway: harmless on Crosspoint, and readers that honor it (Kobo/KOReader) get nicer filenames.
 
 ## Open questions — need on-device / crosspoint-sync validation (Jay + X3)
-- Does Crosspoint save OPDS downloads under the **server-provided filename**? (Decides whether option 1 works.)
-- What `DocumentMeta` fields does Crosspoint's KOSync actually populate at the server (filename? title?)?
+- ✅ Does Crosspoint save under the server-provided filename? **No** (confirmed 2026-09-18) — names by OPDS `<author> - <title>`. Filename-id ruled out; use the hash map.
+- Is `crosspoint-sync`'s `document` field KOReader's partial-MD5, and can we replicate it exactly on the produced EPUB? (Gates the hash-map approach.)
+- What `DocumentMeta` fields does Crosspoint's KOSync actually populate at the server (title? filename?) — for the fallback title match.
 - Is **98%** reachable for short articles on the X3 (does finishing the last page cross the threshold)? If not, may need a per-connector threshold.
 - Where will `crosspoint-sync` run — self-hosted alongside Readloop on the mini, or the hosted `sync.crosspointreader.com`? (Connector must be in the build that runs.)
 
 ## Recommended path
-1. ✅ **Done** — `Content-Disposition: attachment; filename="<title> [rw-<id>].epub"` on the content route (`readwise-source` branch, live on :7323). Downloads now carry the id (and get a real name in Files).
-   - **Verify on-device next:** does Crosspoint save under the server filename (so the `[rw-<id>]` reaches `crosspoint-sync` as `DocumentMeta.filename`)? Grab an article and check the name in Files. If it's kept, option-1 id-mapping is viable; if not, revisit sidecar/title.
-2. Self-host `crosspoint-sync` on the mini; add the `readwise-reader` connector; point the X3's KOSync at it.
+1. ~~Content-Disposition filename stamp~~ — shipped, but **on-device test (2026-09-18) showed Crosspoint ignores it** (see "Ruled out" above). Header kept for other readers. **Pivot to the KOReader-hash map (option 1 above).**
+2. Confirm `crosspoint-sync`'s `document` = KOReader partial-MD5 (read its `kosync.ts`/`matching.ts`), and replicate that hash in the OPDS provider at EPUB-generation time → persist `{hash → readwise_id}`.
+3. Self-host `crosspoint-sync` on the mini; add the `readwise-reader` connector (resolves hash → id via the shared map, title as fallback); point the X3's KOSync at it.
 3. Validate on-device: read an article past 98% → confirm it archives in Readwise and drops out of the OPDS feed.
 4. If solid, PR the connector to `crosspoint-sync` (they built the framework for exactly this — see their Hardcover/ABS connectors).
 
