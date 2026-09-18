@@ -1,6 +1,17 @@
 # Readloop — Plan
 
 ## Progress log
+- **2026-09-18 (later still)** — **Upstream PR opened + v2 scoped.** Opened
+  BHSPitMonkey/news2reader **PR #4** ("Add Readwise Reader provider", focused:
+  provider + image handling; auth/provider-filter offered as follow-ups). Scoped
+  `crosspoint-sync` for v2: its framework already emits a `finished` event at
+  ≥98% (`fanout.ts`), and its existing `readwise.ts` connector is
+  **highlights-only + hidden** (wrong tool). v2 = a new `readwise-reader`
+  connector (carries `finished` → Reader `bulk_update` archive) + a
+  Content-Disposition id-stamp on our side. Full design in
+  [`docs/V2-READ-STATE.md`](V2-READ-STATE.md). This supersedes the standalone
+  `rls-kosync` repo — the connector belongs inside `crosspoint-sync`. Build
+  needs on-device validation (Jay + X3).
 - **2026-09-18 (later)** — **Remote access enabled.** Added optional HTTP Basic
   auth (`OPDS_AUTH_USER`/`OPDS_AUTH_PASS`; internal image route exempt but
   guarded by a per-process secret). Exposed publicly via **Tailscale Funnel** on
@@ -108,9 +119,9 @@ Desktop app surfaces the read-state toggle, threshold, and sync-server URL; docs
 ## Repositories (org: `readloopsync`)
 Sibling repos use the `rls-` prefix (ReadLoopSync) for brevity.
 - **`readloopsync/readloop`** — project hub / docs (this repo).
-- **Fork of `news2reader`** — Readwise *source* + EPUB id-stamping (MIT).
-- **`rls-desktop`** — Tauri app (MIT).
-- **`rls-kosync`** — Readwise *connector* for `crosspoint-sync` (MIT).
+- **`readloopsync/news2reader`** — fork; Readwise source on `readwise-source`. Upstream PR: BHSPitMonkey/news2reader#4.
+- **`rls-desktop`** — Tauri app (MIT), planned.
+- ~~`rls-kosync`~~ — superseded: the read-state connector belongs **inside `crosspoint-sync`** (a `readwise-reader` connector PR), not a standalone repo. See [`docs/V2-READ-STATE.md`](V2-READ-STATE.md).
 
 ## Dependency order
 Phase 0 gates all. Track A is linear (1→2→4; 3 rides on 1; 5–6 close v1). Track B starts after Phase 1 (needs id-stamping + delivered EPUBs); Phase 7 is independent of the app, so it can run in parallel with 4–6.
