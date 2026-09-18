@@ -73,7 +73,8 @@ The connector needs the finished book's **Reader document id**. Options, best fi
 - Where will `crosspoint-sync` run — self-hosted alongside Readloop on the mini, or the hosted `sync.crosspointreader.com`? (Connector must be in the build that runs.)
 
 ## Recommended path
-1. Add `Content-Disposition` with `[rw-<id>]` to the Readwise provider (our repo; small, safe).
+1. ✅ **Done** — `Content-Disposition: attachment; filename="<title> [rw-<id>].epub"` on the content route (`readwise-source` branch, live on :7323). Downloads now carry the id (and get a real name in Files).
+   - **Verify on-device next:** does Crosspoint save under the server filename (so the `[rw-<id>]` reaches `crosspoint-sync` as `DocumentMeta.filename`)? Grab an article and check the name in Files. If it's kept, option-1 id-mapping is viable; if not, revisit sidecar/title.
 2. Self-host `crosspoint-sync` on the mini; add the `readwise-reader` connector; point the X3's KOSync at it.
 3. Validate on-device: read an article past 98% → confirm it archives in Readwise and drops out of the OPDS feed.
 4. If solid, PR the connector to `crosspoint-sync` (they built the framework for exactly this — see their Hardcover/ABS connectors).
