@@ -20,6 +20,9 @@ services:
       # Readwise-only instance: the catalog root goes straight to the Readwise
       # locations, so the reader lands there with no extra taps.
       OPDS_PROVIDERS: readwise
+      # HTTP Basic auth — set both if exposing beyond the LAN (from .env).
+      OPDS_AUTH_USER: ${OPDS_AUTH_USER:-}
+      OPDS_AUTH_PASS: ${OPDS_AUTH_PASS:-}
       # Optional tuning (see the fork's README):
       # READWISE_IMG_MAX_WIDTH: "1000"
       # READWISE_IMG_GRAYSCALE: "1"

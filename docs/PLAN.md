@@ -1,6 +1,14 @@
 # Readloop — Plan
 
 ## Progress log
+- **2026-09-18 (later)** — **Remote access enabled.** Added optional HTTP Basic
+  auth (`OPDS_AUTH_USER`/`OPDS_AUTH_PASS`; internal image route exempt but
+  guarded by a per-process secret). Exposed publicly via **Tailscale Funnel** on
+  port 10000 → `https://humanandco.tail89723f.ts.net:10000/opds` (real TLS,
+  auth required). The X3 can now pull articles away from home (it can't join the
+  tailnet, so Funnel — not tailnet-only Serve — is required). Credentials live
+  only in gitignored `deploy/.env`. A pretty `readloop.humanandco.studio` isn't
+  trivial on Funnel (cert is for the `.ts.net` name) — deferred.
 - **2026-09-18** — **Validated on-device (X3) and deployed durably.** Image
   transcode (webp→grayscale JPEG via sharp) + background cache-warming added;
   images now render on Crosspoint. `OPDS_PROVIDERS=readwise` collapses the
