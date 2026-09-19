@@ -121,7 +121,7 @@ of an article in Readwise, a freshly downloaded EPUB should open at that spot.
 
 ### Phase 2 — ✅ BUILT + server-validated (2026-09-19)
 
-First-open resume is implemented: the OPDS server seeds crosspoint-sync at download; verified end to end server-side (cold-build of a 68% doc seeded a 67.8% row under the matching KOReader hash). On-device confirmation pending. The hash de-risk that made it possible:
+First-open resume is implemented AND confirmed on-device (2026-09-19): a freshly downloaded article pulled its seeded position and jumped 0% -> ~55%. Note the landing is approximate: Readwise reading_progress (68%) and Crosspoint's byte-position percentage (~55%) are different metrics, so resume lands in the right neighborhood, not the exact line. Perfect alignment isn't achievable (Readwise's % is opaque). Server-side: cold-build of a 68% doc seeded a 67.8% row under the matching KOReader hash. The hash de-risk that made it possible:
 Crosspoint computes the KOSync `document` (binary method) as a **KOReader-style partial-MD5** — `lib/KOReaderSync/KOReaderDocumentId.cpp`: read 1024-byte chunks at offsets `getOffset(i)` for `i = -1..10` (i<0 → 0; else `1024 << (2*i)` = `1024·4^i`), MD5 the concatenation. Replicated in Node and it produced the **exact device hash** for a freshly downloaded article (Oreos: `79c3f0ac…` == device). So the OPDS server can compute the device's hash from the bytes it serves.
 
 Note: epub-gen stamps a random `dc:identifier` per build, so the same article regenerated hashes differently — **hash the exact bytes served** (at serve time), don't re-generate.
