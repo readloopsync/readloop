@@ -42,6 +42,19 @@ const MAX_CANDIDATE_PAGES = 1;
 // Archiving the wrong doc is worse than not archiving; our titles match ~1.0.
 const MATCH_THRESHOLD = 0.85;
 
+// Rate-limit backoff. Readwise is 20 req/min; on a 429 we can't read the exact
+// Retry-After (crosspoint-sync's HttpTransport exposes no response headers), so
+// we approximate it: after a 429, skip all Readwise calls for this window. The
+// fan-in worker and the queue retry after it clears.
+const COOLDOWN_MS = Number(process.env.READWISE_RATE_COOLDOWN_MS ?? 60_000);
+let rateLimitedUntil = 0;
+function rateLimited(): boolean {
+  return Date.now() < rateLimitedUntil;
+}
+function noteRateLimit(status: number): void {
+  if (status === 429) rateLimitedUntil = Date.now() + COOLDOWN_MS;
+}
+
 interface ReadwiseCred extends Credential {
   token: string;
 }
@@ -77,6 +90,10 @@ async function listDocs(token: string, http: HttpTransport, location: string): P
       method: 'GET',
       headers: authHeaders(token),
     });
+    if (res.status === 429) {
+      noteRateLimit(res.status);
+      break;
+    }
     if (res.status !== 200) break;
     const body = (await res.json()) as ReaderList;
     out.push(...(body.results ?? []));
@@ -119,6 +136,7 @@ function shouldPush(ev: OutboundEvent): boolean {
 }
 
 async function match(cred: Credential, doc: DocumentMeta, http: HttpTransport): Promise<Match | null> {
+  if (rateLimited()) return null;
   const ta = extractTitleAuthor(doc);
   if (!ta) return null;
   const candidates = await candidatePool(tokenOf(cred), http);
@@ -152,10 +170,12 @@ async function pullProgress(
   http: HttpTransport,
   sinceMs: number
 ): Promise<InboundChange | null> {
+  if (rateLimited()) return null;
   const res = await http(
     `${BASE}/list/?id=${encodeURIComponent(match.externalId)}&withHtmlContent=false`,
     { method: 'GET', headers: authHeaders(tokenOf(cred)) }
   );
+  noteRateLimit(res.status);
   if (res.status !== 200) return null;
   const body = (await res.json()) as {
     results?: { reading_progress?: number; updated_at?: string }[];
@@ -181,7 +201,10 @@ async function push(
     body: JSON.stringify({ updates: [{ id: m.externalId, location: 'archive', seen: true }] }),
   });
   if (res.status === 401) return { ok: false, retryable: false, needsReauth: true, error: 'unauthorized' };
-  if (res.status === 429) return { ok: false, retryable: true, error: 'rate limited' };
+  if (res.status === 429) {
+    noteRateLimit(res.status);
+    return { ok: false, retryable: true, error: 'rate limited' };
+  }
   if (res.status >= 500) return { ok: false, retryable: true, error: `server ${res.status}` };
   if (res.status === 207) {
     // Partial failure: the single item we sent didn't apply. Retry.
