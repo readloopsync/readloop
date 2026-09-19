@@ -47,3 +47,6 @@ Thumbs.db
 
 # Pinned Node runtime for the launchd service
 /.runtime/
+
+# Self-hosted crosspoint-sync (its own repo/upstream; run locally for v2)
+/crosspoint-sync/
