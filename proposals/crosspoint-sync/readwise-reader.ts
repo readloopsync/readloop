@@ -5,6 +5,7 @@ import type {
   DocumentMeta,
   ExternalBook,
   HttpTransport,
+  InboundChange,
   Match,
   OutboundEvent,
   PushResult,
@@ -138,6 +139,35 @@ async function listCurrentlyReading(cred: Credential, http: HttpTransport): Prom
   return pool.map((c) => ({ externalId: c.externalId, title: c.title, author: c.author ?? null }));
 }
 
+/**
+ * Fan-in: pull the current Readwise reading position for a matched document, so
+ * a half-read-in-Readwise article resumes on the device. Readwise exposes only a
+ * 0–1 `reading_progress` (no KOReader xpath), so we return the percentage; the
+ * exact-line seek is best-effort (crosspoint-sync fills a position from a prior
+ * device sample when it has one).
+ */
+async function pullProgress(
+  cred: Credential,
+  match: Match,
+  http: HttpTransport,
+  sinceMs: number
+): Promise<InboundChange | null> {
+  const res = await http(
+    `${BASE}/list/?id=${encodeURIComponent(match.externalId)}&withHtmlContent=false`,
+    { method: 'GET', headers: authHeaders(tokenOf(cred)) }
+  );
+  if (res.status !== 200) return null;
+  const body = (await res.json()) as {
+    results?: { reading_progress?: number; updated_at?: string }[];
+  };
+  const doc = body.results?.[0];
+  if (!doc || typeof doc.reading_progress !== 'number') return null;
+  const pct = Math.max(0, Math.min(1, doc.reading_progress));
+  const updatedAtMs = doc.updated_at ? Date.parse(doc.updated_at) : Date.now();
+  if (sinceMs && Number.isFinite(updatedAtMs) && updatedAtMs <= sinceMs) return null;
+  return { externalId: match.externalId, percentage: pct, finished: pct >= 0.98, updatedAtMs };
+}
+
 async function push(
   cred: Credential,
   m: Match,
@@ -165,7 +195,7 @@ export const readwiseReaderConnector: Connector = {
   id: 'readwise-reader',
   displayName: 'Readwise Reader (archive on finish)',
   tier: 1,
-  capabilities: { read: false, write: true },
+  capabilities: { read: true, write: true },
   carries: ['finished'],
   credentialKind: 'token',
   experimental: false,
@@ -174,5 +204,6 @@ export const readwiseReaderConnector: Connector = {
   shouldPush,
   match,
   push,
+  pullProgress,
   listCurrentlyReading,
 };

@@ -111,3 +111,10 @@ of an article in Readwise, a freshly downloaded EPUB should open at that spot.
   get the right *status/percentage*, but not necessarily an exact-line seek until
   the device has read it once.
 - **Scope:** v3, after v2 (fan-out/archive) is validated on-device.
+
+### v3 status (2026-09-19)
+- ✅ **Phase 1 — pull mechanism built.** `readwise-reader` is now read-capable with `pullProgress()` (verified: pulled `0.6777` for a 68%-read doc). crosspoint-sync's periodic fan-in worker applies it to any **already-matched** doc → device picks it up on its next sync. So *cross-device* resume works: a doc the device has synced once, read further in the Readwise app, updates on the device.
+- ⏳ **Phase 2 — first-open resume (the "read 50% in the app, download fresh, resume" case).** Needs a **match to exist before the first device push**, which means seeding it at **download time**:
+  1. OPDS server computes the EPUB's **KOReader binary partial-MD5** (must exactly equal what the device computes — the key risk, verify on-device) and registers `{hash → readwise id}` (+ optionally the current progress) with crosspoint-sync.
+  2. crosspoint-sync's on-GET refresh (`refresh.ts`) is currently **hard-coded to BookFusion** — generalize it (or rely on the 5-min worker) so the readwise-reader connector is refreshed on pull.
+- **Caveat (both phases):** Readwise gives only a percentage; exact-line seek depends on a position sample from a prior device read (fresh downloads resume by percentage, not necessarily the exact line).
