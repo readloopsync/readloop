@@ -1,6 +1,21 @@
 # Readloop — Plan
 
 ## Progress log
+- **2026-09-19 — v2 VALIDATED end-to-end (archive-on-finish works).** Stood up
+  `crosspoint-sync` on the mini (:17200, node:sqlite, connector linked with the
+  Readwise token, encrypted). Confirmed on-device that Crosspoint's KOSync sends
+  **title/author metadata** (the gating unknown) — so the connector matches by
+  title. Drove it: the connector matched "CrossPoint Reader…" at **confidence
+  1.0** and archived it — verified `location: archive` in Readwise and gone from
+  the OPDS feed. Exposed the sync server for remote use via the **Funnel under a
+  path** (`:10000/sync`, signups disabled). Fixed the reading-% cap by
+  **patching epub-gen to drop the TOC from the spine** (last page now ≈100%) so a
+  real device finish crosses the threshold; finish threshold made env-configurable
+  (`FINISHED_THRESHOLD`, set 0.95). Remaining: make crosspoint-sync durable
+  (launchd), and the optional fully-hands-off device confirmation (download a
+  fresh article → read to end → auto-archive). Local crosspoint-sync mods
+  (connector, threshold env, debug logging) live in `~/Dev/readloop/crosspoint-sync`
+  (gitignored); connector saved in `proposals/`.
 - **2026-09-18 (v2 connector drafted)** — Read `crosspoint-sync` in depth: it treats the KOSync `document` as an opaque hash and matches by **title/author metadata** the firmware sends (not a file hash). Wrote the **`readwise-reader` connector** (carries `finished` → Reader `bulk_update` archive; matches via `decideMatch` on the non-archived Reader pool) — it **typechecks** against crosspoint-sync's types. Saved to [`proposals/crosspoint-sync/`](../proposals/crosspoint-sync/). Also confirmed on-device that Crosspoint ignores `Content-Disposition` (filename-id dead). **Gating unknown before a PR:** does Crosspoint's KOSync send title metadata in the progress call, and is ≥98% reachable for short articles — both need the X3.
 - **2026-09-18 (later still)** — **Upstream PR opened + v2 scoped.** Opened
   BHSPitMonkey/news2reader **PR #4** ("Add Readwise Reader provider", focused:
