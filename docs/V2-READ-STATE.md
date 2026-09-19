@@ -118,3 +118,25 @@ of an article in Readwise, a freshly downloaded EPUB should open at that spot.
   1. OPDS server computes the EPUB's **KOReader binary partial-MD5** (must exactly equal what the device computes — the key risk, verify on-device) and registers `{hash → readwise id}` (+ optionally the current progress) with crosspoint-sync.
   2. crosspoint-sync's on-GET refresh (`refresh.ts`) is currently **hard-coded to BookFusion** — generalize it (or rely on the 5-min worker) so the readwise-reader connector is refreshed on pull.
 - **Caveat (both phases):** Readwise gives only a percentage; exact-line seek depends on a position sample from a prior device read (fresh downloads resume by percentage, not necessarily the exact line).
+
+### Phase 2 hash de-risk — ✅ PASSED (2026-09-19)
+Crosspoint computes the KOSync `document` (binary method) as a **KOReader-style partial-MD5** — `lib/KOReaderSync/KOReaderDocumentId.cpp`: read 1024-byte chunks at offsets `getOffset(i)` for `i = -1..10` (i<0 → 0; else `1024 << (2*i)` = `1024·4^i`), MD5 the concatenation. Replicated in Node and it produced the **exact device hash** for a freshly downloaded article (Oreos: `79c3f0ac…` == device). So the OPDS server can compute the device's hash from the bytes it serves.
+
+Note: epub-gen stamps a random `dc:identifier` per build, so the same article regenerated hashes differently — **hash the exact bytes served** (at serve time), don't re-generate.
+
+**Phase-2 build (revised, simplest path):**
+1. In the Readwise provider's `content.epub` route, after building the file: compute `koHash(file)`, fetch the doc's `reading_progress`, and **seed a progress row** in crosspoint-sync keyed by that hash (percentage + a synthetic position; `device='readloop'`).
+2. First-open `GET /syncs/progress/<hash>` returns it → device resumes. No fan-in/refresh.ts change needed.
+3. Seeding mechanism (TBD): direct write to crosspoint-sync's SQLite (co-located; needs busy-timeout) vs. a small authenticated seed endpoint on crosspoint-sync. In rls-desktop both are one app so it's internal.
+
+```js
+// KOReader/Crosspoint binary document hash (verified against a real device hash)
+function koHash(path){
+  const crypto=require("crypto"), fs=require("fs");
+  const CHUNK=1024, OFFSET_COUNT=12;
+  const fd=fs.openSync(path,"r"), size=fs.fstatSync(fd).size, md5=crypto.createHash("md5"), buf=Buffer.alloc(CHUNK);
+  for(let i=-1;i<OFFSET_COUNT-1;i++){ const off=i<0?0:CHUNK*(4**i); if(off>=size)continue;
+    const n=fs.readSync(fd,buf,0,Math.min(CHUNK,size-off),off); if(n>0)md5.update(buf.subarray(0,n)); }
+  fs.closeSync(fd); return md5.digest("hex");
+}
+```
