@@ -40,3 +40,12 @@ confirmed on-device 2026-09-18.)
 3. Endpoints/fields marked `LIVE-VERIFY GATE` in the connector (Reader v3
    `list`/`bulk_update` shapes; 207 partial-failure handling).
 4. Where crosspoint-sync runs (self-host on the mini vs hosted).
+
+## `readloop-route.ts` (v3 first-open resume)
+Also in this folder: the internal seed endpoint added to crosspoint-sync for v3.
+- Drop at `src/routes/readloop.ts`; wire in `app.ts`: `app.route('/readloop', readloopRoutes(db))`.
+- Env: `READLOOP_SEED_SECRET` (shared with the OPDS server). Inert if unset.
+- The OPDS server (news2reader) computes the EPUB's KOReader hash at download and
+  POSTs `{username, document: hash, percentage}` to `/readloop/seed-progress`;
+  the device's first pull then returns it → resume. Also made `fanout.ts`'s finish
+  threshold env-configurable (`FINISHED_THRESHOLD`) and added request/error logging.

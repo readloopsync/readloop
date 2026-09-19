@@ -119,7 +119,9 @@ of an article in Readwise, a freshly downloaded EPUB should open at that spot.
   2. crosspoint-sync's on-GET refresh (`refresh.ts`) is currently **hard-coded to BookFusion** — generalize it (or rely on the 5-min worker) so the readwise-reader connector is refreshed on pull.
 - **Caveat (both phases):** Readwise gives only a percentage; exact-line seek depends on a position sample from a prior device read (fresh downloads resume by percentage, not necessarily the exact line).
 
-### Phase 2 hash de-risk — ✅ PASSED (2026-09-19)
+### Phase 2 — ✅ BUILT + server-validated (2026-09-19)
+
+First-open resume is implemented: the OPDS server seeds crosspoint-sync at download; verified end to end server-side (cold-build of a 68% doc seeded a 67.8% row under the matching KOReader hash). On-device confirmation pending. The hash de-risk that made it possible:
 Crosspoint computes the KOSync `document` (binary method) as a **KOReader-style partial-MD5** — `lib/KOReaderSync/KOReaderDocumentId.cpp`: read 1024-byte chunks at offsets `getOffset(i)` for `i = -1..10` (i<0 → 0; else `1024 << (2*i)` = `1024·4^i`), MD5 the concatenation. Replicated in Node and it produced the **exact device hash** for a freshly downloaded article (Oreos: `79c3f0ac…` == device). So the OPDS server can compute the device's hash from the bytes it serves.
 
 Note: epub-gen stamps a random `dc:identifier` per build, so the same article regenerated hashes differently — **hash the exact bytes served** (at serve time), don't re-generate.
